@@ -1,0 +1,137 @@
+{
+    "django_migrations": [
+        "id",
+        "app",
+        "name",
+        "applied"
+    ],
+    "sqlite_sequence": [
+        "name",
+        "seq"
+    ],
+    "auth_group_permissions": [
+        "id",
+        "group_id",
+        "permission_id"
+    ],
+    "auth_user_groups": [
+        "id",
+        "user_id",
+        "group_id"
+    ],
+    "auth_user_user_permissions": [
+        "id",
+        "user_id",
+        "permission_id"
+    ],
+    "django_admin_log": [
+        "id",
+        "object_id",
+        "object_repr",
+        "action_flag",
+        "change_message",
+        "content_type_id",
+        "user_id",
+        "action_time"
+    ],
+    "django_content_type": [
+        "id",
+        "app_label",
+        "model"
+    ],
+    "auth_permission": [
+        "id",
+        "content_type_id",
+        "codename",
+        "name"
+    ],
+    "auth_group": [
+        "id",
+        "name"
+    ],
+    "auth_user": [
+        "id",
+        "password",
+        "last_login",
+        "is_superuser",
+        "username",
+        "last_name",
+        "email",
+        "is_staff",
+        "is_active",
+        "date_joined",
+        "first_name"
+    ],
+    "django_session": [
+        "session_key",
+        "session_data",
+        "expire_date"
+    ],
+    "django_summernote_attachment": [
+        "id",
+        "name",
+        "file",
+        "uploaded"
+    ],
+    "resume_resumeanalysis": [
+        "created",
+        "id",
+        "analysis_body",
+        "resume_id"
+    ],
+    "job_job": [
+        "id",
+        "title",
+        "body"
+    ],
+    "account_emailconfirmation": [
+        "id",
+        "created",
+        "sent",
+        "key",
+        "email_address_id"
+    ],
+    "account_emailaddress": [
+        "id",
+        "verified",
+        "primary",
+        "user_id",
+        "email"
+    ],
+    "socialaccount_socialapp": [
+        "id",
+        "provider",
+        "name",
+        "client_id",
+        "secret",
+        "key",
+        "provider_id",
+        "settings"
+    ],
+    "socialaccount_socialtoken": [
+        "id",
+        "token",
+        "token_secret",
+        "expires_at",
+        "account_id",
+        "app_id"
+    ],
+    "socialaccount_socialaccount": [
+        "id",
+        "provider",
+        "uid",
+        "last_login",
+        "date_joined",
+        "user_id",
+        "extra_data"
+    ],
+    "resume_resume": [
+        "created",
+        "id",
+        "title",
+        "body_text",
+        "thumbnail_image",
+        "pdf_file",
+        "thumbnail_count"
+    ]
+}
