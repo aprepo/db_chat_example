@@ -4,13 +4,12 @@ import psycopg2
 from google.cloud import bigquery
 import json
 import os
+import requests
 import openai
-
-# Load API key from Streamlit secrets
-openai_client = openai.OpenAI(api_key=st.secrets["openai"]["api_key"])
 
 # File to store metadata
 METADATA_FILE = "db_metadata.json"
+OLLAMA_API_URL = "http://localhost:11434/api/generate"  # Ollama's local API endpoint
 
 
 # Function to fetch schema metadata
@@ -80,27 +79,51 @@ def filter_relevant_tables(metadata, user_prompt):
     return relevant_tables if relevant_tables else metadata  # Default to full schema if nothing matches
 
 
-def generate_sql_queries(prompt):
-    response = openai_client.chat.completions.create(
-        model="gpt-3.5-turbo",
-        messages=[{"role": "system",
-                   "content": "You are an SQL query generator. Return only valid SQL queries based on the provided schema and database type. Do not use any quotes, markdown, or formatting. If multiple queries are required, separate them with a special delimiter '##QUERY##'. The response should contain nothing but the SQL queries themselves."},
-                  {"role": "user", "content": prompt}],
-        temperature=0.0,
-        stream=False
-    )
-    return response.choices[0].message.content.strip().split("##QUERY##")
+def query_llm(provider, prompt):
+    if provider == "Local (Llama3)":
+        response = requests.post(
+            OLLAMA_API_URL,
+            json={"model": "llama3", "prompt": prompt, "stream": False}
+        )
+        response.raise_for_status()
+        return response.json()["response"].strip()
+
+    elif provider == "OpenAI ChatGPT":
+        openai_api_key = st.secrets["openai"]["api_key"]
+        client = openai.OpenAI(api_key=openai_api_key)
+        response = client.chat.completions.create(
+            model="gpt-3.5-turbo",
+            messages=[{"role": "system", "content": "You are an SQL assistant."},
+                      {"role": "user", "content": prompt}],
+        )
+        return response.choices[0].message.content.strip()
+
+    elif provider == "Google Gemini":
+        google_api_key = st.secrets["google"]["api_key"]
+        url = f"https://generativelanguage.googleapis.com/v1/models/gemini-pro:generateText?key={google_api_key}"
+        headers = {"Content-Type": "application/json"}
+        data = json.dumps({"prompt": {"text": prompt}})
+        response = requests.post(url, headers=headers, data=data)
+        response.raise_for_status()
+        return response.json()["candidates"][0]["output"]
 
 
-def generate_response_explanation(user_prompt, query_results):
-    response = openai_client.chat.completions.create(
-        model="gpt-3.5-turbo",
-        messages=[{"role": "system",
-                   "content": "You are a helpful assistant. Answer the user's original question using the provided query results from multiple queries."},
-                  {"role": "user", "content": f"Original question: {user_prompt}\nQuery results: {query_results}"}],
-        stream=False
+def generate_sql_queries(provider, prompt):
+    llm_prompt = (
+        "You are an SQL query generator. Return only valid SQL queries based on the provided schema and database type. "
+        "Do not use any quotes, markdown, or formatting. If multiple queries are required, separate them with a special delimiter '##QUERY##'. "
+        "The response should contain nothing but the SQL queries themselves."
+        f"\n{prompt}"
     )
-    return response.choices[0].message.content.strip()
+    return query_llm(provider, llm_prompt).split("##QUERY##")
+
+
+def generate_response_explanation(provider, user_prompt, query_results):
+    llm_prompt = (
+        "You are a helpful assistant. Answer the user's original question using the provided query results from multiple queries."
+        f"\nOriginal question: {user_prompt}\nQuery results: {query_results}"
+    )
+    return query_llm(provider, llm_prompt)
 
 
 def execute_queries(db_type, conn_str, queries):
@@ -126,6 +149,7 @@ def main():
     st.title("Chat with Your Database")
 
     db_type = st.selectbox("Select Database Type", ["PostgreSQL", "SQLite", "BigQuery"])
+    llm_provider = st.selectbox("Select LLM Provider", ["Local (Llama3)", "OpenAI ChatGPT", "Google Gemini"], index=0)
     metadata = {}
 
     if db_type == "PostgreSQL":
@@ -157,13 +181,13 @@ def main():
         relevant_metadata = filter_relevant_tables(metadata, user_prompt)
         schema_info = json.dumps(relevant_metadata)
         llm_prompt = f"Here is the relevant database schema:\n{schema_info}\nDatabase type: {db_type}\nGenerate SQL queries that retrieve the necessary data: {user_prompt}"
-        generated_queries = generate_sql_queries(llm_prompt)
+        generated_queries = generate_sql_queries(llm_provider, llm_prompt)
 
         st.text_area("Generated SQL Queries:", "\n".join(generated_queries))
 
         query_results = execute_queries(db_type, conn_str if db_type != "SQLite" else db_path, generated_queries)
 
-        final_response = generate_response_explanation(user_prompt, query_results)
+        final_response = generate_response_explanation(llm_provider, user_prompt, query_results)
 
         st.subheader("Response")
         st.write(final_response)
